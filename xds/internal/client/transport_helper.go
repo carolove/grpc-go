@@ -257,10 +257,16 @@ func (t *TransportHelper) send(ctx context.Context) {
 			switch update := u.(type) {
 			case *watchAction:
 				target, rType, version, nonce = t.processWatchInfo(update)
+				if rType == ListenerResource || rType == ClusterResource{
+					target = []string{}
+				}
 			case *ackAction:
 				target, rType, version, nonce, send = t.processAckInfo(update, stream)
 				if !send {
 					continue
+				}
+				if rType == ListenerResource || rType == ClusterResource{
+					target = []string{}
 				}
 				errMsg = update.errMsg
 			}

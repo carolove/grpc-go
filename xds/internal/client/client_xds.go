@@ -51,21 +51,25 @@ const transportSocketName = "envoy.transport_sockets.tls"
 // are interested in.
 func UnmarshalListener(resources []*anypb.Any, logger *grpclog.PrefixLogger) (map[string]ListenerUpdate, error) {
 	update := make(map[string]ListenerUpdate)
-	for _, r := range resources {
-		if !IsListenerResource(r.GetTypeUrl()) {
-			return nil, fmt.Errorf("xds: unexpected resource type: %q in LDS response", r.GetTypeUrl())
-		}
-		lis := &v3listenerpb.Listener{}
-		if err := proto.Unmarshal(r.GetValue(), lis); err != nil {
-			return nil, fmt.Errorf("xds: failed to unmarshal resource in LDS response: %v", err)
-		}
-		logger.Infof("Resource with name: %v, type: %T, contains: %v", lis.GetName(), lis, lis)
-
-		lu, err := processListener(lis)
-		if err != nil {
-			return nil, err
-		}
-		update[lis.GetName()] = *lu
+	//for _, r := range resources {
+	//	if !IsListenerResource(r.GetTypeUrl()) {
+	//		return nil, fmt.Errorf("xds: unexpected resource type: %q in LDS response", r.GetTypeUrl())
+	//	}
+	//	lis := &v3listenerpb.Listener{}
+	//	if err := proto.Unmarshal(r.GetValue(), lis); err != nil {
+	//		return nil, fmt.Errorf("xds: failed to unmarshal resource in LDS response: %v", err)
+	//	}
+	//	logger.Infof("Resource with name: %v, type: %T, contains: %v", lis.GetName(), lis, lis)
+	//
+	//	lu, err := processListener(lis)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	update[lis.GetName()] = *lu
+	//}
+	update["0.0.0.0_20880"] = ListenerUpdate{
+		RouteConfigName: "20880",
+		MaxStreamDuration: defaultWatchExpiryTimeout*4,
 	}
 	return update, nil
 }
@@ -237,14 +241,16 @@ func UnmarshalRouteConfig(resources []*anypb.Any, logger *grpclog.PrefixLogger) 
 func generateRDSUpdateFromRouteConfiguration(rc *v3routepb.RouteConfiguration, logger *grpclog.PrefixLogger) (RouteConfigUpdate, error) {
 	var vhs []*VirtualHost
 	for _, vh := range rc.GetVirtualHosts() {
-		routes, err := routesProtoToSlice(vh.Routes, logger)
-		if err != nil {
-			return RouteConfigUpdate{}, fmt.Errorf("received route is invalid: %v", err)
+		if vh.GetName() != "allow_any" {
+			routes, err := routesProtoToSlice(vh.Routes, logger)
+			if err != nil {
+				return RouteConfigUpdate{}, fmt.Errorf("received route is invalid: %v", err)
+			}
+			vhs = append(vhs, &VirtualHost{
+				Domains: vh.GetDomains(),
+				Routes:  routes,
+			})
 		}
-		vhs = append(vhs, &VirtualHost{
-			Domains: vh.GetDomains(),
-			Routes:  routes,
-		})
 	}
 	return RouteConfigUpdate{VirtualHosts: vhs}, nil
 }
@@ -385,9 +391,14 @@ func UnmarshalCluster(resources []*anypb.Any, logger *grpclog.PrefixLogger) (map
 		logger.Infof("Resource with name: %v, type: %T, contains: %v", cluster.GetName(), cluster, cluster)
 		cu, err := validateCluster(cluster)
 		if err != nil {
-			return nil, err
+			logger.Infof("[UnmarshalCluster]validateCluster :%s " ,err.Error())
+			continue
 		}
 
+		if cluster.GetName() != "outbound|20880||mosn.io.dubbo.proxy" {
+			logger.Infof("[UnmarshalCluster]  :%s ignore " , cluster.GetName())
+			continue
+		}
 		// If the Cluster message in the CDS response did not contain a
 		// serviceName, we will just use the clusterName for EDS.
 		if cu.ServiceName == "" {

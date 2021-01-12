@@ -142,7 +142,9 @@ func (w *serviceUpdateWatcher) handleRDSResp(update xdsclient.RouteConfigUpdate,
 		return
 	}
 
-	matchVh := findBestMatchingVirtualHost(w.serviceName, update.VirtualHosts)
+	// resolver name是由 service alias protocol等组成
+	sns := strings.Split(w.serviceName, "|")
+	matchVh := findBestMatchingVirtualHost(sns[0], update.VirtualHosts)
 	if matchVh == nil {
 		// No matching virtual host found.
 		w.serviceCb(serviceUpdate{}, fmt.Errorf("no matching virtual host found for %q", w.serviceName))

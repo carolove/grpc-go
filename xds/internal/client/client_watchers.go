@@ -120,8 +120,10 @@ func (c *clientImpl) watch(wi *watchInfo) (cancel func()) {
 	var watchers map[string]map[*watchInfo]bool
 	switch wi.rType {
 	case ListenerResource:
+		wi.target = "0.0.0.0_20880"
 		watchers = c.ldsWatchers
 	case RouteConfigResource:
+		wi.target = "20880"
 		watchers = c.rdsWatchers
 	case ClusterResource:
 		watchers = c.cdsWatchers
