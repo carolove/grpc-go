@@ -180,7 +180,9 @@ func newInvertMatcher(m headerMatcherInterface) *invertMatcher {
 }
 
 func (i *invertMatcher) match(md metadata.MD) bool {
-	return !i.m.match(md)
+	ret := i.m.match(md)
+	logger.Infof("[match] ret:%v, md:%#v", ret, md)
+	return !ret
 }
 
 func (i *invertMatcher) String() string {

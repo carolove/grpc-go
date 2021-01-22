@@ -19,6 +19,7 @@
 package resolver
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -95,6 +96,9 @@ func newCompositeMatcher(pm pathMatcherInterface, hms []headerMatcherInterface, 
 }
 
 func (a *compositeMatcher) match(info iresolver.RPCInfo) bool {
+	abt, _ := json.Marshal(a)
+	ibt, _ := json.Marshal(info)
+	logger.Infof("[match] enter, compositeMatcher:%s, info: %s", string(abt), string(ibt))
 	if a.pm != nil && !a.pm.match(info.Method) {
 		return false
 	}

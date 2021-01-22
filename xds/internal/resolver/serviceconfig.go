@@ -117,6 +117,10 @@ func (cs *configSelector) SelectConfig(rpcInfo iresolver.RPCInfo) (*iresolver.RP
 		return nil, status.Errorf(codes.Unavailable, "no valid clusters")
 	}
 	var rt *route
+
+	rbt,_ := json.Marshal(&cs.routes)
+	rpbt, _ := json.Marshal(&rpcInfo)
+	logger.Infof("[SelectConfig] route:%s, rpcInfo:%s", string(rbt), string(rpbt))
 	// Loop through routes in order and select first match.
 	for _, r := range cs.routes {
 		if r.m.match(rpcInfo) {
@@ -198,7 +202,8 @@ func (r *xdsResolver) newConfigSelector(su serviceUpdate) (*configSelector, erro
 		routes:   make([]route, len(su.routes)),
 		clusters: make(map[string]*clusterInfo),
 	}
-
+	sbt,_ := json.Marshal(&su)
+	logger.Infof("[newConfigSelector] su:%s", string(sbt))
 	for i, rt := range su.routes {
 		clusters := newWRR()
 		for cluster, weight := range rt.Action {
